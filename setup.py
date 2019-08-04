@@ -43,7 +43,7 @@ setup(
     author_email='dhirensk@gmail.com',
     license='None',
     description='Mask R-CNN for object detection and instance segmentation',
-    packages=["mrcnn"],
+    packages=["mrcnn", "siim"],
     #install_requires=install_reqs,
     include_package_data=True,
     python_requires='>=3.4',
