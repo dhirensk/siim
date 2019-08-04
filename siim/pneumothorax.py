@@ -457,6 +457,7 @@ if __name__ == '__main__':
             weights_path = model.get_imagenet_weights()
         else:
             weights_path = args.weights
+           #pass
 
         # Load weights
         print("Loading weights ", weights_path)
