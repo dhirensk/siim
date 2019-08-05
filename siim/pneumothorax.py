@@ -9,7 +9,7 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
        the command line as such:
 
     # Train a new model starting from pre-trained COCO weights
-    python3 pneumothorax.py train --dataset=/path/to/siim/dataset --weights=coco
+    python3 pneumothorax.py train --dataset=/path/to/siim/dataset --weights=coco --traindir=val --valdir=val
 
     # Resume training a model that you had trained earlier
     python3 pneumothorax.py train --dataset=/path/to/siim/dataset --weights=last
@@ -259,16 +259,16 @@ class SiimDataset(utils.Dataset):
         return image
 
 
-def train(model):
+def train(model ):
     """Train the model."""
     # Training dataset.
     dataset_train = SiimDataset()
-    dataset_train.load_siim(args.dataset, "train")
+    dataset_train.load_siim(args.dataset, args.traindir)
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = SiimDataset()
-    dataset_val.load_siim(args.dataset, "val")
+    dataset_val.load_siim(args.dataset, args.valdir)
     dataset_val.prepare()
 
     # *** This training schedule is an example. Update to your needs ***
@@ -392,9 +392,15 @@ if __name__ == '__main__':
     parser.add_argument("command",
                         metavar="<command>",
                         help="'train' or 'splash'")
-    parser.add_argument('--dataset', required=False,
+    parser.add_argument('--dataset', required=True,
                         metavar="/path/to/balloon/dataset/",
                         help='Directory of the Balloon dataset')
+    parser.add_argument('--traindir', required=True,
+                        metavar="dir inside dataset folder e.g. train/val/test/sample",
+                        help='Directory of the Balloon dataset')  
+    parser.add_argument('--valdir', required=True,
+                        metavar="dir inside dataset folder e.g. train/val/test/sample",
+                        help='Directory of the Balloon dataset')    
     parser.add_argument('--weights', required=False,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
@@ -469,6 +475,12 @@ if __name__ == '__main__':
                 "mrcnn_bbox", "mrcnn_mask"])
         else:
             model.load_weights(weights_path, by_name=True)
+            
+    
+    assert args.traindir,"Argument --traindir required for training"
+    assert args.valdir, "Argument --valdir required for training"
+
+
 
     # Train or evaluate
     if args.command == "train":
@@ -477,6 +489,5 @@ if __name__ == '__main__':
         detect_and_color_splash(model, image_path=args.image,
                                 video_path=args.video)
     else:
-        train(model)
-        #print("'{}' is not recognized. "
-              #"Use 'train' or 'splash'".format(args.command))
+        print("'{}' is not recognized. "
+              "Use 'train' or 'splash'".format(args.command))
