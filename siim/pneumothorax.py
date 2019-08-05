@@ -64,11 +64,11 @@ class SiimConfig(Config):
     
     BACKBONE = "resnet101"
     
-    IMAGE_RESIZE_MODE = "none"
+    IMAGE_RESIZE_MODE = "square"
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 1
+    IMAGES_PER_GPU = 2
     
     # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
     GPU_COUNT = 1
@@ -77,13 +77,13 @@ class SiimConfig(Config):
     NUM_CLASSES = 1 + 1  # Background + pneumothorax
 
     # Number of training steps per epoch
-    STEPS_PER_EPOCH = 1490
+    STEPS_PER_EPOCH = 1000
     
     
     VALIDATION_STEPS = 100
     
     # Skip detections with < 90% confidence
-    DETECTION_MIN_CONFIDENCE = 0.7
+    DETECTION_MIN_CONFIDENCE = 0.9
     
     # Number of color channels per image. RGB = 3, grayscale = 1, RGB-D = 4
     # Changing this requires other changes in the code. See the WIKI for more
@@ -94,14 +94,14 @@ class SiimConfig(Config):
     MEAN_PIXEL = np.array([119.6, 119.6, 119.6])
     #MEAN_PIXEL = np.array([0., 0., 0.])
     
-    RPN_TRAIN_ANCHORS_PER_IMAGE = 512
+    RPN_TRAIN_ANCHORS_PER_IMAGE = 64
     
     RPN_NMS_THRESHOLD = 0.9
     
-    TRAIN_ROIS_PER_IMAGE = 512
+    TRAIN_ROIS_PER_IMAGE = 100
     # Maximum number of ground truth instances to use in one image
     # This needs to be high
-    MAX_GT_INSTANCES = 250
+    MAX_GT_INSTANCES = 100
     
     # Max number of final detections
     DETECTION_MAX_INSTANCES = 1
@@ -477,5 +477,6 @@ if __name__ == '__main__':
         detect_and_color_splash(model, image_path=args.image,
                                 video_path=args.video)
     else:
-        print("'{}' is not recognized. "
-              "Use 'train' or 'splash'".format(args.command))
+        train(model)
+        #print("'{}' is not recognized. "
+              #"Use 'train' or 'splash'".format(args.command))
