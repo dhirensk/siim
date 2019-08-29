@@ -1,9 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="b580d6ca-a822-4e46-8fc6-75642a96def0" name="Default Changelist" comment="">
+    <list default="true" id="6d9918b0-6225-4262-92e6-b2768bc4ebf3" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/siim.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/siim.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/siim/inspect image-annotation.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/inspect image-annotation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mrcnn/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/mrcnn/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mrcnn/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/mrcnn/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mrcnn/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/mrcnn/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mrcnn/visualize.py" beforeDir="false" afterPath="$PROJECT_DIR$/mrcnn/visualize.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/LungSegmentationUtil.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/LungSegmentationUtil.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/demo.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/siim/demo.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/inspect image-annotation.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/siim/inspect image-annotation.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/inspect_pneumothorax_data.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/siim/inspect_pneumothorax_data.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/inspect_pneumothorax_model.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/siim/inspect_pneumothorax_model.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/jpeg_to_tf_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/jpeg_to_tf_record.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/lungsegmentation.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/lungsegmentation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/mask_functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/mask_functions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/model_testing_server.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/model_testing_server.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/pixel_mean.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/pixel_mean.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/pneumothorax-Copy1.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/pneumothorax-Copy1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/pneumothorax.py" beforeDir="false" afterPath="$PROJECT_DIR$/siim/pneumothorax.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siim/show_sample_mask.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/siim/show_sample_mask.ipynb" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -13,12 +30,11 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-    <option name="SET_USER_NAME_GLOBALLY" value="false" />
   </component>
-  <component name="ProjectId" id="1P2opehMlfVUtl9SFDMDlEkIS7G" />
+  <component name="ProjectId" id="1PVIK0xBV9MZ93Ukyziwtni4X6t" />
   <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -37,11 +53,11 @@
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="b580d6ca-a822-4e46-8fc6-75642a96def0" name="Default Changelist" comment="" />
-      <created>1565081737447</created>
+      <changelist id="6d9918b0-6225-4262-92e6-b2768bc4ebf3" name="Default Changelist" comment="" />
+      <created>1565952770709</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1565081737447</updated>
+      <updated>1565952770709</updated>
     </task>
     <servers />
   </component>

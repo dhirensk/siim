@@ -1,11 +1,7 @@
 #!/usr/bin/env python
-# coding: utf-8
 
-# # Mask R-CNN - Inspect Ballon Trained Model
-# 
-# Code and visualizations to test, debug, and evaluate the Mask R-CNN model.
 
-# In[1]:
+# command python3 model_testing_server.py --datasetfolder=test --csvfile='submissions4.csv'
 
 
 import os
@@ -110,7 +106,7 @@ def generatecsv(csvpath, datasetfolder):
 
     # Download file from the Releases page and set its path
     # https://github.com/matterport/Mask_RCNN/releases
-    weights_path = "/home/sa-279/Mask_RCNN/logs/siim20190801T1940/mask_rcnn_siim_0026.h5"
+    weights_path = "/home/sa-279/Mask_RCNN/logs/siim20190813T1933/mask_rcnn_siim_0029.h5"
 
 
     # Or, load the last model you trained
@@ -167,7 +163,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Train Mask R-CNN to detect balloons.')
     parser.add_argument('--csvfile', required=True,
-                        metavar="/path/to/dataset/csvfile",
+                        metavar="Name of csvfile",
                         help='Name of csv file')
     parser.add_argument('--datasetfolder', required=True,
                         metavar="train test val sample",

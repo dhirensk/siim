@@ -28,10 +28,8 @@ import numpy as np
 import skimage.draw
 import pandas as pd
 import pydicom
-from imgaug import augmenters as iaa
+import imgaug
 from mask_functions import rle2mask
-from skimage import exposure
-from skimage.color import gray2rgb
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../")
@@ -62,86 +60,42 @@ class SiimConfig(Config):
     # Give the configuration a recognizable name
     NAME = "siim"
     
-    BACKBONE = "resnet101"
-    
     IMAGE_RESIZE_MODE = "none"
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 1
+    IMAGES_PER_GPU = 2
     
     # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
-    GPU_COUNT = 1
+    GPU_COUNT = 4
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 1  # Background + pneumothorax
 
     # Number of training steps per epoch
-    STEPS_PER_EPOCH = 1490
-    
-    
-    VALIDATION_STEPS = 100
-    
+    STEPS_PER_EPOCH = 100
+
     # Skip detections with < 90% confidence
-    DETECTION_MIN_CONFIDENCE = 0.7
+    DETECTION_MIN_CONFIDENCE = 0.9
     
     # Number of color channels per image. RGB = 3, grayscale = 1, RGB-D = 4
     # Changing this requires other changes in the code. See the WIKI for more
     # details: https://github.com/matterport/Mask_RCNN/wiki
-    IMAGE_CHANNEL_COUNT = 3
+    IMAGE_CHANNEL_COUNT = 1
 
     # Image mean (RGB)
-    MEAN_PIXEL = np.array([119.6, 119.6, 119.6])
-    #MEAN_PIXEL = np.array([0., 0., 0.])
+    MEAN_PIXEL = np.array([124.63057495122789])
     
-    RPN_TRAIN_ANCHORS_PER_IMAGE = 512
-    
-    RPN_NMS_THRESHOLD = 0.9
-    
-    TRAIN_ROIS_PER_IMAGE = 512
     # Maximum number of ground truth instances to use in one image
-    # This needs to be high
-    MAX_GT_INSTANCES = 250
+    MAX_GT_INSTANCES = 100
     
     # Max number of final detections
     DETECTION_MAX_INSTANCES = 1
-    
-    DETECTION_MIN_CONFIDENCE = 0.6
-
-    # Non-maximum suppression threshold for detection
-    DETECTION_NMS_THRESHOLD = 0.1    
 
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.
-    USE_MINI_MASK = True
-    #started with 0.0001 upto 16
-    LEARNING_RATE = 0.0001
-    # upto 20
-    # 0.00001 upto 26
-    # 0.000001 
-    #no decay in SGD optmizer : model compile function
-    
-        # Length of square anchor side in pixels
-    RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
-    
-    # Weight decay regularization
-    WEIGHT_DECAY = 0.0001
-    
-        # Loss weights for more precise optimization.
-    # Can be used for R-CNN training setup.
-    LOSS_WEIGHTS = {
-        "rpn_class_loss": 1.,
-        "rpn_bbox_loss": 1.,
-        "mrcnn_class_loss": 1.,
-        "mrcnn_bbox_loss": 1.,
-        "mrcnn_mask_loss": 1.
-    }
+    USE_MINI_MASK = False
 
-        # Train or freeze batch normalization layers
-    #     None: Train BN layers. This is the normal mode
-    #     False: Freeze BN layers. Good when using a small batch size
-    #     True: (don't use). Set layer in training mode even when predicting
-    TRAIN_BN = False  # Defaulting to False since batch size is often small
 ############################################################
 #  Dataset
 ############################################################
@@ -157,7 +111,7 @@ class SiimDataset(utils.Dataset):
         self.add_class("pneumothorax", 1, "pneumothorax")
 
         # Train or validation dataset?
-        assert subset in ["train", "val", "test", "sample"]
+        assert subset in ["train", "val"]
         # e.g. /home/sa-279/Mask_RCNN/datasets/pneumothorax/train/train-rle.csv
         # e.g. /home/sa-279/Mask_RCNN/datasets/pneumothorax/val/val-rle.csv
         file = os.path.join(dataset_dir, subset, subset+"-rle.csv")
@@ -173,8 +127,8 @@ class SiimDataset(utils.Dataset):
         print(file)
         annotations = pd.read_csv(file)
         annotations.columns = ['ImageId', 'ImageEncoding']
-        #annotations = annotations.sample(frac=1).reset_index(drop=True)  it causes submission id shuffle
-        #annotations = annotations[annotations.iloc[:, 1] != "-1"] training data is already filtered in train-val-split.py
+        annotations = annotations.sample(frac=1).reset_index(drop=True)
+        annotations = annotations[annotations.iloc[:, 1] != "-1"]
         image_ids = annotations.iloc[:, 0].values
         rles = annotations.iloc[:, 1].values
         for row in annotations.itertuples():
@@ -183,16 +137,12 @@ class SiimDataset(utils.Dataset):
             if str(encoding) == "-1":
                 encoding = "0 1048576"
             image_path = os.path.join(dataset_dir, id + ".dcm")
-            #image = pydicom.dcmread(image_path)
-            #image preprocessing Adaptive Histogram Equilization
-            #height = image.Rows
-            height = 1024
-            #width = image.Columns
-            width = 1024
+            image = pydicom.dcmread(image_path)
+            height = image.Rows
+            width = image.Columns
             mask = rle2mask(encoding,width,height)
             mask = mask.T
-            #mask = mask.reshape(width,height,1) just 1 instance per image
-            mask = np.expand_dims(mask,axis=2)
+            mask = mask.reshape(width,height,1)
             class_name = "pneumothorax"
             if str(encoding) == "-1":
                 class_name = "BG"
@@ -248,12 +198,8 @@ class SiimDataset(utils.Dataset):
         img_path = self.image_info[image_id]['path']
         if str(img_path).endswith('.dcm'):
             image = pydicom.dcmread(img_path).pixel_array
-            #image = np.array(image)
-            #image = exposure.equalize_adapthist(image, clip_limit=0.03)
-            #image = exposure.equalize_hist(image)
-            #image = np.expand_dims(image,axis=2)  # 1024,1024,1
-            image = gray2rgb(image, alpha=None)
-            assert image.shape == (1024,1024,3)
+            image = np.array(image)
+            image = np.expand_dims(image,axis=2)  # 1024,1024,1
         else:
             image = skimage.io.imread(self.image_info[image_id]['path'])
         return image
@@ -276,37 +222,17 @@ def train(model):
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
     # print("Training network heads")
-
-    augmentation = iaa.SomeOf((0, 3), [
-        iaa.Fliplr(0.5),
-        iaa.OneOf([iaa.Affine(rotate=15),
-                   iaa.Affine(rotate=-15),
-                   iaa.Affine(
-                       scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                       translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)})
-                   #iaa.Affine(shear=(-3, 3))
-                  ]),
-        iaa.Multiply((0.5, 1.5))
-    ])
-            
+    augmentation = imgaug.augmenters.Sometimes(0.5, [
+        imgaug.augmenters.Fliplr(0.5),
+        imgaug.augmenters.GaussianBlur(sigma=(0.0, 5.0))
+    ])                   
     print("Training all layers")
+    model.train(dataset_train, dataset_val,
+                learning_rate=config.LEARNING_RATE,
+                epochs=10,
+                layers='heads', augmentation=augmentation )
 
-    model.train(dataset_train, dataset_val,
-                learning_rate=SiimConfig.LEARNING_RATE,
-                epochs=15,
-                layers='heads', augmentation=augmentation )     
 
-    model.train(dataset_train, dataset_val,
-                learning_rate=SiimConfig.LEARNING_RATE,
-                epochs=25,
-                layers='all', augmentation=augmentation )   
-  
-    model.train(dataset_train, dataset_val,
-                learning_rate=SiimConfig.LEARNING_RATE / 10,
-                epochs=50,
-                layers='all', augmentation=augmentation )
-     
-    
 def color_splash(image, mask):
     """Apply color splash effect.
     image: RGB image [height, width, 3]
@@ -395,7 +321,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', required=False,
                         metavar="/path/to/balloon/dataset/",
                         help='Directory of the Balloon dataset')
-    parser.add_argument('--weights', required=False,
+    parser.add_argument('--weights', required=True,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
     parser.add_argument('--logs', required=False,
@@ -442,32 +368,30 @@ if __name__ == '__main__':
                                   model_dir=args.logs)
 
     # Select weights file to load
-    if args.weights:
+    if args.weights.lower() == "coco":
+        weights_path = COCO_WEIGHTS_PATH
+        # Download weights file
+        if not os.path.exists(weights_path):
+            utils.download_trained_weights(weights_path)
+    elif args.weights.lower() == "last":
+        # Find last trained weights
+        weights_path = model.find_last()
+    elif args.weights.lower() == "imagenet":
+        # Start from ImageNet trained weights
+        weights_path = model.get_imagenet_weights()
+    else:
+        weights_path = args.weights
 
-        if args.weights.lower() == "coco":
-            weights_path = COCO_WEIGHTS_PATH
-            # Download weights file
-            if not os.path.exists(weights_path):
-                utils.download_trained_weights(weights_path)
-        elif args.weights.lower() == "last":
-            # Find last trained weights
-            weights_path = model.find_last()
-        elif args.weights.lower() == "imagenet":
-            # Start from ImageNet trained weights
-            weights_path = model.get_imagenet_weights()
-        else:
-            weights_path = args.weights
-
-        # Load weights
-        print("Loading weights ", weights_path)
-        if args.weights.lower() == "coco":
-            # Exclude the last layers because they require a matching
-            # number of classes
-            model.load_weights(weights_path, by_name=True, exclude=[
-                "mrcnn_class_logits", "mrcnn_bbox_fc",
-                "mrcnn_bbox", "mrcnn_mask"])
-        else:
-            model.load_weights(weights_path, by_name=True)
+    # Load weights
+    print("Loading weights ", weights_path)
+    if args.weights.lower() == "coco":
+        # Exclude the last layers because they require a matching
+        # number of classes
+        model.load_weights(weights_path, by_name=True, exclude=["conv1",
+            "mrcnn_class_logits", "mrcnn_bbox_fc",
+            "mrcnn_bbox", "mrcnn_mask"])
+    else:
+        model.load_weights(weights_path, by_name=True)
 
     # Train or evaluate
     if args.command == "train":

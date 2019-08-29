@@ -21,7 +21,7 @@ class LungSegmentation():
     def enhance_gamma(self,image, gamma):
     
         max_pixel = np.max(image)
-        print(image.shape)
+        #print(image.shape)
         height,width = image.shape
         e_image = np.zeros(image.shape)
         for h in range(0,height):
@@ -51,7 +51,7 @@ class LungSegmentation():
     
     def otsu_mask(self,image):
     
-        print("here1")
+        #print("here1")
         # Otsu's thresholding after Gaussian filtering
         #blur1 = cv2.GaussianBlur(image, (5, 5), 0)
         #image = cv2.equalizeHist(image)
@@ -169,7 +169,7 @@ class LungSegmentation():
         ret, otsu_image = self.otsu_mask(enhanced_image1)
         
         #display(otsu_image)
-        filled_image, num_labels, labels, stats, centroids, tmp_image = self.connectedcomponents(otsu_image,8)
+        filled_image, num_labels, labels, stats, centroids = self.connectedcomponents(otsu_image,8)
         smooth_image = self.smoothimage(filled_image)
         lung_image = self.applylungmask(image, smooth_image)
         return lung_image

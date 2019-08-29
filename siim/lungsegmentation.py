@@ -22,16 +22,16 @@ csvfile = os.path.join(datadir,'train-rle.csv')
 #imagepath = os.path.join(datadir, '1.2.276.0.7230010.3.1.4.8323329.10003.1517875220.942420.dcm')
 #imagepath = os.path.join(datadir, '1.2.276.0.7230010.3.1.4.8323329.4904.1517875185.355709.dcm')
 #imagepath = os.path.join(datadir, '1.2.276.0.7230010.3.1.4.8323329.1314.1517875167.222290.dcm')
-#imagepath = os.path.join(datadir, '1.2.276.0.7230010.3.1.4.8323329.4440.1517875182.865105.dcm')
+imagepath = os.path.join(datadir, '1.2.276.0.7230010.3.1.4.8323329.4440.1517875182.865105.dcm')
 #imagepath = os.path.join(datadir, '1.2.276.0.7230010.3.1.4.8323329.4982.1517875185.837576.dcm')
-imagepath = os.path.join(datadir, '1.2.276.0.7230010.3.1.4.8323329.12743.1517875241.599591.dcm')
+#imagepath = os.path.join(datadir, '1.2.276.0.7230010.3.1.4.8323329.12743.1517875241.599591.dcm')
 
 df = pd.read_csv(csvfile,header = None)
 #df.columns['ImageId','Encodings']
 dcm = pydicom.dcmread(imagepath)
 pixel = dcm.pixel_array
 samples = df.iloc[:, -1].values
-rle_m = rle2mask(samples[5], 1024, 1024)
+rle_m = rle2mask(samples[7], 1024, 1024)
 #annotation = df.loc[df['ImageId'] =='1.2.276.0.7230010.3.1.4.8323329.1314.1517875167.222290']
 gamma = 2
 kernel1 = np.ones((3,3),np.uint8)
@@ -64,15 +64,16 @@ def enhance_gamma(image, gamma):
 
 def display(pixel):
 
-    fig, ax = plt.subplots(1, figsize=(20,20))
+    fig, axes = plt.subplots(1,2, figsize=(25,25))
     #str = "/home/sa-279/Mask_RCNN/datasets/pneumothorax/val/1.2.276.0.7230010.3.1.4.8323329.10557.1517875224.257683.dcm"
 
     pixel = pixel
     #display_enhanced_gamma(pixel)
     im = Image.fromarray(pixel)
     #im.save(os.path.join(ROOT_DIR,"siim\\1.2.276.0.7230010.3.1.4.8323329.1314.1517875167.222290.png"))
-    ax.imshow(pixel, cmap="gray")
-    #ax.imshow(rle_m.T, alpha = 0.2)
+    axes[0].imshow(pixel, cmap="gray")
+    axes[1].imshow(pixel, cmap="gray")
+    axes[1].imshow(rle_m.T, alpha = 0.2)
     plt.show()
 
 def otsu_mask(image):
@@ -143,7 +144,7 @@ def connectedcomponents(image, connectivity):
     else:
         filled_image = np.ones((height, width))
     filled_image = filled_image.astype(np.uint8)
-    return filled_image, num_labels, labels, stats, centroids, tmp_image
+    return filled_image, num_labels, labels, stats, centroids
 
 def smoothimage(image):
      #image = cv2.erode(image, None, iterations=2)
@@ -197,9 +198,10 @@ def getSegmentedImage():
     ret, otsu_image = otsu_mask(enhanced_image)
     
     #display(otsu_image)
-    filled_image, num_labels, labels, stats, centroids, tmp_image = connectedcomponents(otsu_image,8)
+    filled_image, num_labels, labels, stats, centroids = connectedcomponents(otsu_image,8)
     smooth_image = smoothimage(filled_image)
     lung_image = applylungmask(pixel, smooth_image)
-    return lung_image
-#display(lung_image)
+    return enhanced_image
+
+display(getSegmentedImage())
 

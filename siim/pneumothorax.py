@@ -9,7 +9,7 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
        the command line as such:
 
     # Train a new model starting from pre-trained COCO weights
-    python3 pneumothorax.py train --dataset=/path/to/siim/dataset --weights=coco --traindir=val --valdir=val
+    python3 pneumothorax.py train --dataset=/path/to/siim/dataset --weights=coco
 
     # Resume training a model that you had trained earlier
     python3 pneumothorax.py train --dataset=/path/to/siim/dataset --weights=last
@@ -32,6 +32,7 @@ from imgaug import augmenters as iaa
 from mask_functions import rle2mask
 from skimage import exposure
 from skimage.color import gray2rgb
+import cv2
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../")
@@ -52,6 +53,7 @@ DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 #  Configurations
 ############################################################
 
+#lungsegmentation = LungSegmentation()
 
 class SiimConfig(Config):
 
@@ -62,13 +64,13 @@ class SiimConfig(Config):
     # Give the configuration a recognizable name
     NAME = "siim"
     
-    BACKBONE = "resnet101"
+    BACKBONE = "resnet50"
     
-    IMAGE_RESIZE_MODE = "square"
+    IMAGE_RESIZE_MODE = "none"
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 2
+    IMAGES_PER_GPU = 1
     
     # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
     GPU_COUNT = 1
@@ -77,7 +79,7 @@ class SiimConfig(Config):
     NUM_CLASSES = 1 + 1  # Background + pneumothorax
 
     # Number of training steps per epoch
-    STEPS_PER_EPOCH = 1000
+    STEPS_PER_EPOCH = 1490
     
     
     VALIDATION_STEPS = 100
@@ -91,14 +93,15 @@ class SiimConfig(Config):
     IMAGE_CHANNEL_COUNT = 3
 
     # Image mean (RGB)
-    MEAN_PIXEL = np.array([119.6, 119.6, 119.6])
-    #MEAN_PIXEL = np.array([0., 0., 0.])
+    #MEAN_PIXEL = np.array([119.6, 119.6, 119.6])
     
-    RPN_TRAIN_ANCHORS_PER_IMAGE = 64
+    MEAN_PIXEL = np.array([132.975,132.975,132.975])
+    
+    RPN_TRAIN_ANCHORS_PER_IMAGE = 256
     
     RPN_NMS_THRESHOLD = 0.9
     
-    TRAIN_ROIS_PER_IMAGE = 100
+    TRAIN_ROIS_PER_IMAGE = 256
     # Maximum number of ground truth instances to use in one image
     # This needs to be high
     MAX_GT_INSTANCES = 100
@@ -106,7 +109,6 @@ class SiimConfig(Config):
     # Max number of final detections
     DETECTION_MAX_INSTANCES = 1
     
-    DETECTION_MIN_CONFIDENCE = 0.6
 
     # Non-maximum suppression threshold for detection
     DETECTION_NMS_THRESHOLD = 0.1    
@@ -116,13 +118,16 @@ class SiimConfig(Config):
     USE_MINI_MASK = True
     #started with 0.0001 upto 16
     LEARNING_RATE = 0.0001
-    # upto 20
-    # 0.00001 upto 26
-    # 0.000001 
+
+    LEARNING_MOMENTUM = 0.9
+
     #no decay in SGD optmizer : model compile function
     
         # Length of square anchor side in pixels
     RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
+
+    
+
     
     # Weight decay regularization
     WEIGHT_DECAY = 0.0001
@@ -131,7 +136,7 @@ class SiimConfig(Config):
     # Can be used for R-CNN training setup.
     LOSS_WEIGHTS = {
         "rpn_class_loss": 1.,
-        "rpn_bbox_loss": 1.,
+        "rpn_bbox_loss": 2.,
         "mrcnn_class_loss": 1.,
         "mrcnn_bbox_loss": 1.,
         "mrcnn_mask_loss": 1.
@@ -241,34 +246,52 @@ class SiimDataset(utils.Dataset):
             super(self.__class__, self).image_reference(image_id)
 
     # we are creating our own load_image
+    
+    def enhance_gamma(self,image, gamma):
+        max_pixel = np.max(image)
+        height,width = image.shape
+        e_image = np.zeros(image.shape)
+        for h in range(0,height):
+            for w in range(0,width):
+                e_image[h,w] = (image[h,w]/max_pixel)**gamma
+        e_image = e_image * 255
+        e_image = e_image.astype(np.uint8)
+        #e_image = cv2.medianBlur(e_image,ksize=3)
+
+        #e_image = cv2.erode(e_image, None, iterations=2)
+        #e_image = cv2.dilate(e_image, None, iterations=2)
+        return e_image
+    
     def load_image(self, image_id):
         """Load the specified image and return a [H,W,3] Numpy array.
         """
         # Load image
         img_path = self.image_info[image_id]['path']
-        if str(img_path).endswith('.dcm'):
+        if str(img_path).endswith('.dcm'):           
             image = pydicom.dcmread(img_path).pixel_array
-            #image = np.array(image)
-            #image = exposure.equalize_adapthist(image, clip_limit=0.03)
-            #image = exposure.equalize_hist(image)
+            enhanced_hist = cv2.equalizeHist(image)
+            remove_noise = cv2.fastNlMeansDenoising(image,None,3,7,21)
+            blur = cv2.GaussianBlur(remove_noise,(3,3),0)
+            sharpen = cv2.addWeighted(enhanced_hist,1.0,blur,-1.0,0)
+            enhanced_pixel = cv2.addWeighted(enhanced_hist,1.0, sharpen,0.7,0)
             #image = np.expand_dims(image,axis=2)  # 1024,1024,1
-            image = gray2rgb(image, alpha=None)
-            assert image.shape == (1024,1024,3)
+            image = gray2rgb(enhanced_pixel, alpha=None)
+            #assert image.shape == (1024,1024,3)
         else:
             image = skimage.io.imread(self.image_info[image_id]['path'])
         return image
 
 
-def train(model ):
+def train(model):
     """Train the model."""
     # Training dataset.
     dataset_train = SiimDataset()
-    dataset_train.load_siim(args.dataset, args.traindir)
+    dataset_train.load_siim(args.dataset, "train")
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = SiimDataset()
-    dataset_val.load_siim(args.dataset, args.valdir)
+    dataset_val.load_siim(args.dataset, "val")
     dataset_val.prepare()
 
     # *** This training schedule is an example. Update to your needs ***
@@ -286,97 +309,16 @@ def train(model ):
                        translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)})
                    #iaa.Affine(shear=(-3, 3))
                   ]),
-        iaa.Multiply((0.5, 1.5))
+        iaa.Multiply((0.8, 1.2))
     ])
             
     print("Training all layers")
 
     model.train(dataset_train, dataset_val,
                 learning_rate=SiimConfig.LEARNING_RATE,
-                epochs=15,
-                layers='heads', augmentation=augmentation )     
+                epochs=100,
+                layers='all', augmentation=augmentation )     
 
-    model.train(dataset_train, dataset_val,
-                learning_rate=SiimConfig.LEARNING_RATE,
-                epochs=25,
-                layers='all', augmentation=augmentation )   
-  
-    model.train(dataset_train, dataset_val,
-                learning_rate=SiimConfig.LEARNING_RATE / 10,
-                epochs=50,
-                layers='all', augmentation=augmentation )
-     
-    
-def color_splash(image, mask):
-    """Apply color splash effect.
-    image: RGB image [height, width, 3]
-    mask: instance segmentation mask [height, width, instance count]
-
-    Returns result image.
-    """
-    # Make a grayscale copy of the image. The grayscale copy still
-    # has 3 RGB channels, though.
-    gray = skimage.color.gray2rgb(skimage.color.rgb2gray(image)) * 255
-    # Copy color pixels from the original color image where mask is set
-    if mask.shape[-1] > 0:
-        # We're treating all instances as one, so collapse the mask into one layer
-        mask = (np.sum(mask, -1, keepdims=True) >= 1)
-        splash = np.where(mask, image, gray).astype(np.uint8)
-    else:
-        splash = gray.astype(np.uint8)
-    return splash
-
-
-def detect_and_color_splash(model, image_path=None, video_path=None):
-    assert image_path or video_path
-
-    # Image or video?
-    if image_path:
-        # Run model detection and generate the color splash effect
-        print("Running on {}".format(args.image))
-        # Read image
-        image = skimage.io.imread(args.image)
-        # Detect objects
-        r = model.detect([image], verbose=1)[0]
-        # Color splash
-        splash = color_splash(image, r['masks'])
-        # Save output
-        file_name = "splash_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
-        skimage.io.imsave(file_name, splash)
-    elif video_path:
-        import cv2
-        # Video capture
-        vcapture = cv2.VideoCapture(video_path)
-        width = int(vcapture.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(vcapture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = vcapture.get(cv2.CAP_PROP_FPS)
-
-        # Define codec and create video writer
-        file_name = "splash_{:%Y%m%dT%H%M%S}.avi".format(datetime.datetime.now())
-        vwriter = cv2.VideoWriter(file_name,
-                                  cv2.VideoWriter_fourcc(*'MJPG'),
-                                  fps, (width, height))
-
-        count = 0
-        success = True
-        while success:
-            print("frame: ", count)
-            # Read next image
-            success, image = vcapture.read()
-            if success:
-                # OpenCV returns images as BGR, convert to RGB
-                image = image[..., ::-1]
-                # Detect objects
-                r = model.detect([image], verbose=0)[0]
-                # Color splash
-                splash = color_splash(image, r['masks'])
-                # RGB -> BGR to save image to video
-                splash = splash[..., ::-1]
-                # Add image to video writer
-                vwriter.write(splash)
-                count += 1
-        vwriter.release()
-    print("Saved to ", file_name)
 
 
 ############################################################
@@ -392,15 +334,9 @@ if __name__ == '__main__':
     parser.add_argument("command",
                         metavar="<command>",
                         help="'train' or 'splash'")
-    parser.add_argument('--dataset', required=True,
+    parser.add_argument('--dataset', required=False,
                         metavar="/path/to/balloon/dataset/",
                         help='Directory of the Balloon dataset')
-    parser.add_argument('--traindir', required=True,
-                        metavar="dir inside dataset folder e.g. train/val/test/sample",
-                        help='Directory of the Balloon dataset')  
-    parser.add_argument('--valdir', required=True,
-                        metavar="dir inside dataset folder e.g. train/val/test/sample",
-                        help='Directory of the Balloon dataset')    
     parser.add_argument('--weights', required=False,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
@@ -463,7 +399,6 @@ if __name__ == '__main__':
             weights_path = model.get_imagenet_weights()
         else:
             weights_path = args.weights
-           #pass
 
         # Load weights
         print("Loading weights ", weights_path)
@@ -475,12 +410,6 @@ if __name__ == '__main__':
                 "mrcnn_bbox", "mrcnn_mask"])
         else:
             model.load_weights(weights_path, by_name=True)
-            
-    
-    assert args.traindir,"Argument --traindir required for training"
-    assert args.valdir, "Argument --valdir required for training"
-
-
 
     # Train or evaluate
     if args.command == "train":
